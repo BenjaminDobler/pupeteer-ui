@@ -1,0 +1,22 @@
+
+
+
+<input #portInput type="number" ><button (click)="addRemote(portInput.value)">Add</button>
+
+
+<div *ngFor="let remote of remotes.remotes">
+  {{remote.port}} <button (click)="remote.connect()" *ngIf="!remote.connected">Connect</button>
+  <div *ngIf="remote.connected">
+    Browser: {{remote.info.Browser}}<br>
+    Debugging URL: {{remote.info.webSocketDebuggerUrl}}
+  </div>
+  <div class="target-container" *ngFor="let target of remote.targets">
+    <button *ngIf="!target.recording" (click)="target.startRecording()">Record</button>
+    {{target.original.type()}} {{target.original.url()}}
+    <div *ngIf="target.currentRecording">
+      <div class="event-container" *ngFor="let event of target.currentRecording.events">
+        {{event.type}} {{event.selector}} {{event.value}}
+      </div>
+    </div>
+  </div>
+</div>
