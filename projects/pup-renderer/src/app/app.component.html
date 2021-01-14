@@ -17,6 +17,9 @@
       <div class="event-container" *ngFor="let event of target.currentRecording.events">
         {{event.type}} {{event.selector}} {{event.value}}
       </div>
+      <button (click)="target.currentRecording.stopRecording()">Stop Recording</button>
+      <button (click)="target.startPlayback(target.currentRecording)">Play Recording</button>
+
     </div>
   </div>
 </div>

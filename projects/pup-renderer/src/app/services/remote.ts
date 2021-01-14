@@ -25,7 +25,7 @@ export class Remote {
 
     targets.forEach((target) => {
       if (target.type() === 'page' || target.type() === 'webview') {
-        const t = new Target(this.zone);
+        const t = new Target(browser, this.zone);
         t.original = target;
         this.targets.push(t);
       }
@@ -33,7 +33,7 @@ export class Remote {
 
     browser.on('targetcreated', (target) => {
       if (target.type() === 'page' || target.type() === 'webview') {
-        const t = new Target(this.zone);
+        const t = new Target(browser, this.zone);
         t.original = target;
         this.zone.run(() => {
           this.targets.push(t);
