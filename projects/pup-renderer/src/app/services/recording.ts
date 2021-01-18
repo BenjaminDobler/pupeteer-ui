@@ -3,13 +3,14 @@ import { remote } from 'electron';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { Frame, Page, Target } from 'puppeteer';
+import { threadId } from 'worker_threads';
 declare var window: any;
 declare var addEventListener: any;
 
 export interface RecordEvent {
   selector?: string;
   value?: string;
-  type: 'click' | 'urlchange' | 'type' | 'initialurl';
+  type: 'click' | 'urlchange' | 'type' | 'initialurl' | 'scroll';
 }
 
 export class Recording {
@@ -20,6 +21,12 @@ export class Recording {
   constructor(private target: Target, private zone: NgZone) {}
 
   recordEvent(event: RecordEvent) {
+    if (
+      event.type === 'scroll' &&
+      this.events[this.events.length - 1].type === 'scroll'
+    ) {
+      this.events.pop();
+    }
     this.zone.run(() => {
       this.events.push(event);
     });
@@ -49,6 +56,7 @@ export class Recording {
     });
 
     const inject = () => {
+      let innerHint: HTMLElement = document.querySelector('#ppt-hint');
       var p: HTMLElement = document.querySelector('#ppt-highlighter');
       if (!p) {
         p = document.createElement('div');
@@ -62,6 +70,19 @@ export class Recording {
         p.style.transition = 'all';
         p.style.transitionDuration = '300ms';
         p.style.zIndex = '5000';
+
+        innerHint = document.createElement('div');
+        innerHint.setAttribute('id', 'ppt-hint');
+        innerHint.style.position = 'absolute';
+        innerHint.style.bottom = '-20px';
+        innerHint.style.left = '0';
+        innerHint.style.border = '1px solid #0000ff';
+        innerHint.style.background = '#fff';
+        innerHint.style.pointerEvents = 'none';
+        innerHint.style.fontSize = '12px';
+        innerHint.style.whiteSpace = 'nowrap';
+        p.append(innerHint);
+
         document.body.appendChild(p);
       }
 
@@ -73,19 +94,19 @@ export class Recording {
         true
       );
 
-      var hint: HTMLElement = document.querySelector('#ppt-hint');
+      // var hint: HTMLElement = document.querySelector('#ppt-hint');
 
-      if (!hint) {
-        hint = document.createElement('div');
-        hint.setAttribute('id', 'ppt-hint');
-        hint.style.position = 'absolute';
-        hint.style.bottom = '0';
-        hint.style.left = '0';
-        hint.style.border = '1px solid #0000ff';
-        hint.style.background = '#fff';
-        hint.style.pointerEvents = 'none';
-        document.body.appendChild(hint);
-      }
+      //   if (!hint) {
+      //     hint = document.createElement('div');
+      //     hint.setAttribute('id', 'ppt-hint');
+      //     hint.style.position = 'absolute';
+      //     hint.style.bottom = '0';
+      //     hint.style.left = '0';
+      //     hint.style.border = '1px solid #0000ff';
+      //     hint.style.background = '#fff';
+      //     hint.style.pointerEvents = 'none';
+      //     document.body.appendChild(hint);
+      //   }
 
       window.moveHandle = function (x, y) {
         // p.style.transform = "translate(" + x + "px, " + y + "px)";
@@ -105,7 +126,7 @@ export class Recording {
             p.style.width = rect.width + 'px';
             p.style.height = rect.height + 'px';
             selector = window.finder(event.target, {});
-            hint.textContent = selector;
+            innerHint.textContent = selector;
             window.onSelector(selector);
           }
         },
@@ -115,6 +136,7 @@ export class Recording {
       window.addEventListener(
         'click',
         function ___pup_ui_click_handler(event) {
+          selector = window.finder(event.target, {});
           console.log('Click ', selector);
           window.recordEvent({
             selector: selector,
@@ -125,14 +147,28 @@ export class Recording {
       );
 
       window.addEventListener(
+        'scroll',
+        function ___pup_ui_scroll_handler(event) {
+          console.log('event ', event.target);
+          window.recordEvent({
+            selector: 'window',
+            type: 'scroll',
+            value: window.scrollY,
+          });
+        },
+        true
+      );
+
+      window.addEventListener(
         'change',
         function ___pup_ui_change_handler(event) {
           console.log('value', event.target.value);
           console.log('Change ', selector);
+          selector = window.finder(event.target, {});
           window.recordEvent({
             selector: selector,
             value: event.target.value,
-            type: 'change',
+            type: 'type',
           });
         },
         true
@@ -200,19 +236,24 @@ export class Recording {
           true
         );
         p.remove();
-
       }
 
       var hint: HTMLElement = document.querySelector('#ppt-hint');
       if (hint) {
-          hint.remove();
+        hint.remove();
       }
 
-      window.removeEventListener('mousemove', window.___pup_ui_mousemove_handler, true);
+      window.removeEventListener(
+        'mousemove',
+        window.___pup_ui_mousemove_handler,
+        true
+      );
       window.removeEventListener('click', window.___pup_ui_click_handler, true);
-      window.removeEventListener('change', window.___pup_ui_change_handler, true);
-
-
+      window.removeEventListener(
+        'change',
+        window.___pup_ui_change_handler,
+        true
+      );
     });
 
     this.recording = false;

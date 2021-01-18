@@ -1,5 +1,6 @@
 import { Browser, Page } from 'puppeteer';
 import { Queue } from '../util/queue';
+import { wait } from '../util/wait';
 import { RecordEvent } from './recording';
 
 export class Playback {
@@ -11,35 +12,49 @@ export class Playback {
 
   async start() {
     this.currentStepIndex = 0;
-    const page = await this.browser.newPage(); // open new tab
+    const page = await this.browser.newPage();
     this.page = page;
-    await page.goto(this.events[0].value); // go to github.com
+    await page.goto(this.events[0].value);
     await page.bringToFront();
 
     this.currentStepIndex = 1;
 
-    this.events.forEach((event: RecordEvent) => {
-      // this.playbackQueue.add(this.beforeStep, this);
+    this.events.forEach((event: RecordEvent, index) => {
+      this.playbackQueue.add(this.beforeStep, this, index);
       if (event.type === 'click') {
         this.playbackQueue.add(this.click, this, event.selector);
+      } else if (event.type === 'type') {
+        this.playbackQueue.add(this.type, this, event.selector, event.value);
+      } else if (event.type === 'scroll') {
+        this.playbackQueue.add(this.scroll, this, event.selector, event.value);
       }
     });
     this.playbackQueue.add(this.done, this);
+  }
 
-    
+  async beforeStep(index) {
+    console.log('Step ', index);
+    await wait(2000);
   }
 
   async done() {
-    console.log('Playback done!')
+    console.log('Playback done!');
   }
 
   async click(selector) {
-    console.log('execute click');
+    console.log('execute click: ', selector);
     // await beforeStep('click', selector);
     const element = await this.page.waitForSelector(selector, {
       visible: true,
     });
     await element.click();
+  }
+
+  async scroll(selector, value) {
+    console.log('execute scroll ', value);
+    await this.page.evaluate((scrollPos) => {
+      window.scrollTo({ top: scrollPos });
+    }, value);
   }
 
   async mousedown(selector) {
@@ -52,7 +67,7 @@ export class Playback {
   }
 
   async type(selector, value) {
-    console.log('execute type');
+    console.log('execute type ', selector, value);
 
     // await beforeStep('type', selector, value);
     const element = await this.page.waitForSelector(selector, {
