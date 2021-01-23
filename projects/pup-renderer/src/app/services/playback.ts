@@ -20,12 +20,14 @@ export class Playback {
     this.currentStepIndex = 1;
 
     this.events.forEach((event: RecordEvent, index) => {
-      this.playbackQueue.add(this.beforeStep, this, index);
       if (event.type === 'click') {
+        this.playbackQueue.add(this.beforeStep, this, index);
         this.playbackQueue.add(this.click, this, event.selector);
       } else if (event.type === 'type') {
+        this.playbackQueue.add(this.beforeStep, this, index);
         this.playbackQueue.add(this.type, this, event.selector, event.value);
       } else if (event.type === 'scroll') {
+        this.playbackQueue.add(this.beforeStep, this, index);
         this.playbackQueue.add(this.scroll, this, event.selector, event.value);
       }
     });
